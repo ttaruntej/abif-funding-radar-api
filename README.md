@@ -35,3 +35,7 @@ Dedicated backend for the public GitHub Pages frontend at `abif-funding-radar`.
 ## Hosting
 
 This repo is designed for serverless deployment on Vercel. After importing the repo, set the environment variables above and point the frontend `VITE_API_BASE_URL` to the deployed URL.
+
+Deploy shortcut:
+
+- [Import on Vercel](https://vercel.com/new/clone?repository-url=https://github.com/ttaruntej/abif-funding-radar-api)
