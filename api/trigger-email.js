@@ -29,16 +29,19 @@ export default async function handler(req, res) {
 
   if (req.method === 'POST') {
     const { target_emails, mode, filters } = req.body || {};
-    const hasRecipientInput = typeof target_emails === 'string' && target_emails.trim() !== '';
     const sanitizedRecipients = sanitizeRecipients(target_emails);
 
-    if (hasRecipientInput && !sanitizedRecipients) {
+    if (typeof target_emails !== 'string' || target_emails.trim() === '') {
+      return res.status(400).json({ error: 'At least one email recipient is required' });
+    }
+
+    if (!sanitizedRecipients) {
       return res.status(400).json({ error: 'No valid email recipients found in the provided list' });
     }
 
     try {
       const result = await dispatchWorkflow(emailWorkflowId, {
-        target_emails: sanitizedRecipients || '',
+        target_emails: sanitizedRecipients,
         mode: mode || 'standard',
         filters: JSON.stringify(filters || {})
       });

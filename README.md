@@ -20,7 +20,7 @@ Dedicated backend for the public GitHub Pages frontend at `abif-funding-radar`.
 - `SYNC_WORKFLOW_ID`: defaults to `source-sync.yml`
 - `ALLOWED_ORIGINS`: comma-separated frontend origins allowed to call the API
 - `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS`, `SMTP_FROM`: SMTP config for feedback relay
-- `ABIF_TEAM_EMAIL`: default email recipient fallback
+- `ABIF_TEAM_EMAIL`: optional feedback recipient fallback
 - `FEEDBACK_TO`: optional override for feedback emails
 
 ## Routes
