@@ -1,4 +1,4 @@
-const DEFAULT_HEADERS = 'X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version';
+const DEFAULT_HEADERS = 'Authorization, X-Access-Token, X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version';
 const DEFAULT_ALLOWED_ORIGINS = [
   'https://ttaruntej.github.io',
   'https://www.ttaruntej.github.io',
