@@ -13,6 +13,8 @@ Dedicated backend for the public GitHub Pages frontend at `abif-funding-radar`.
 ## Environment variables
 
 - `GH_TOKEN` or `GH_PAT`: GitHub token with access to dispatch workflows for the target repo
+- `ACCESS_PASSWORD` or `ACCESS_PASSWORDS`: Access token(s) for `POST /api/verify-access` (`ACCESS_PASSWORDS` accepts comma-separated values)
+- `SITE_PASSWORD`, `ADMIN_PASSWORD`: legacy aliases supported for auth compatibility
 - `GH_REPO_OWNER`: defaults to `ttaruntej`
 - `GH_REPO_NAME`: defaults to `abif-funding-radar`
 - `GH_REF`: defaults to `main`
@@ -26,6 +28,7 @@ Dedicated backend for the public GitHub Pages frontend at `abif-funding-radar`.
 ## Routes
 
 - `GET /api/health`
+- `POST /api/verify-access`
 - `GET /api/trigger-email`
 - `POST /api/trigger-email`
 - `GET /api/trigger-sync`
