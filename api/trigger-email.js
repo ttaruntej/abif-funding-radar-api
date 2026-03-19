@@ -1,5 +1,7 @@
-import { applyCors, handleOptions } from './_lib/cors.js';
+import { parseAccessPasswords, requireAccessToken } from './_lib/auth.js';
+import { applyCors, handleOptions, rejectDisallowedOrigin } from './_lib/cors.js';
 import { dispatchWorkflow, fetchLatestWorkflowRun, fetchRepositoryJson, getGitHubToken, getRepoConfig } from './_lib/github.js';
+import { enforceRateLimit } from './_lib/rate-limit.js';
 
 const sanitizeRecipients = (rawRecipients) => {
   if (typeof rawRecipients !== 'string' || rawRecipients.trim() === '') {
@@ -15,9 +17,22 @@ const sanitizeRecipients = (rawRecipients) => {
 };
 
 export default async function handler(req, res) {
-  applyCors(req, res);
+  const corsState = applyCors(req, res);
 
   if (handleOptions(req, res)) {
+    return;
+  }
+
+  if (rejectDisallowedOrigin(req, res, corsState)) {
+    return;
+  }
+
+  if (!enforceRateLimit(req, res, { scope: 'trigger-email', limit: 60, windowMs: 10 * 60 * 1000 })) {
+    return;
+  }
+
+  const configuredPasswords = parseAccessPasswords();
+  if (!requireAccessToken(req, res, configuredPasswords)) {
     return;
   }
 

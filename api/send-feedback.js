@@ -1,17 +1,32 @@
 import nodemailer from 'nodemailer';
-import { applyCors, handleOptions } from './_lib/cors.js';
+import { parseAccessPasswords, requireAccessToken } from './_lib/auth.js';
+import { applyCors, handleOptions, rejectDisallowedOrigin } from './_lib/cors.js';
+import { enforceRateLimit } from './_lib/rate-limit.js';
 
 const FEEDBACK_FALLBACK = 'tbimanager@abif.iitkgp.ac.in';
 
 export default async function handler(req, res) {
-  applyCors(req, res, 'POST,OPTIONS');
+  const corsState = applyCors(req, res, 'POST,OPTIONS');
 
   if (handleOptions(req, res)) {
     return;
   }
 
+  if (rejectDisallowedOrigin(req, res, corsState)) {
+    return;
+  }
+
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
+  }
+
+  if (!enforceRateLimit(req, res, { scope: 'send-feedback', limit: 20, windowMs: 10 * 60 * 1000 })) {
+    return;
+  }
+
+  const configuredPasswords = parseAccessPasswords();
+  if (!requireAccessToken(req, res, configuredPasswords)) {
+    return;
   }
 
   const { feedback, userEmail, timestamp } = req.body || {};

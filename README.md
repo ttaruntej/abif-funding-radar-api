@@ -15,6 +15,8 @@ Dedicated backend for the public GitHub Pages frontend at `abif-funding-radar`.
 - `GH_TOKEN` or `GH_PAT`: GitHub token with access to dispatch workflows for the target repo
 - `ACCESS_PASSWORD` or `ACCESS_PASSWORDS`: Access token(s) for `POST /api/verify-access` (`ACCESS_PASSWORDS` accepts comma-separated values)
 - `SITE_PASSWORD`, `ADMIN_PASSWORD`: legacy aliases supported for auth compatibility
+- `ACCESS_SESSION_SECRET`: secret used to sign short-lived API access tokens returned by `POST /api/verify-access`
+- `ACCESS_TOKEN_TTL_SECONDS`: optional token lifetime in seconds (default: `28800`)
 - `GH_REPO_OWNER`: defaults to `ttaruntej`
 - `GH_REPO_NAME`: defaults to `abif-funding-radar`
 - `GH_REF`: defaults to `main`
@@ -28,12 +30,12 @@ Dedicated backend for the public GitHub Pages frontend at `abif-funding-radar`.
 ## Routes
 
 - `GET /api/health`
-- `POST /api/verify-access`
-- `GET /api/trigger-email`
-- `POST /api/trigger-email`
-- `GET /api/trigger-sync`
-- `POST /api/trigger-sync`
-- `POST /api/send-feedback`
+- `POST /api/verify-access` (returns a short-lived bearer token)
+- `GET /api/trigger-email` (requires bearer token)
+- `POST /api/trigger-email` (requires bearer token)
+- `GET /api/trigger-sync` (requires bearer token)
+- `POST /api/trigger-sync` (requires bearer token)
+- `POST /api/send-feedback` (requires bearer token)
 
 ## Hosting
 

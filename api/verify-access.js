@@ -1,41 +1,24 @@
-import crypto from 'node:crypto';
-import { applyCors, handleOptions } from './_lib/cors.js';
-
-const parseAccessPasswords = () => {
-  const raw = [
-    process.env.ACCESS_PASSWORDS,
-    process.env.ACCESS_PASSWORD,
-    process.env.SITE_PASSWORD,
-    process.env.ADMIN_PASSWORD
-  ]
-    .filter(Boolean)
-    .flatMap((value) => value.split(','))
-    .map((value) => value.trim())
-    .filter(Boolean);
-
-  return Array.from(new Set(raw));
-};
-
-const safeEquals = (input, target) => {
-  const inputBuffer = Buffer.from(String(input || ''));
-  const targetBuffer = Buffer.from(String(target || ''));
-
-  if (inputBuffer.length !== targetBuffer.length) {
-    return false;
-  }
-
-  return crypto.timingSafeEqual(inputBuffer, targetBuffer);
-};
+import { createAccessToken, parseAccessPasswords, safeEquals } from './_lib/auth.js';
+import { applyCors, handleOptions, rejectDisallowedOrigin } from './_lib/cors.js';
+import { enforceRateLimit } from './_lib/rate-limit.js';
 
 export default async function handler(req, res) {
-  applyCors(req, res, 'POST,OPTIONS');
+  const corsState = applyCors(req, res, 'POST,OPTIONS');
 
   if (handleOptions(req, res)) {
     return;
   }
 
+  if (rejectDisallowedOrigin(req, res, corsState)) {
+    return;
+  }
+
   if (req.method !== 'POST') {
     return res.status(405).json({ success: false, error: 'Method not allowed' });
+  }
+
+  if (!enforceRateLimit(req, res, { scope: 'verify-access', limit: 10, windowMs: 10 * 60 * 1000 })) {
+    return;
   }
 
   const { password } = req.body || {};
@@ -53,5 +36,11 @@ export default async function handler(req, res) {
     return res.status(401).json({ success: false, error: 'Invalid Access Key' });
   }
 
-  return res.status(200).json({ success: true });
+  const session = createAccessToken(configuredPasswords);
+  return res.status(200).json({
+    success: true,
+    token: session.token,
+    expiresAt: session.expiresAt,
+    tokenType: 'Bearer'
+  });
 }
