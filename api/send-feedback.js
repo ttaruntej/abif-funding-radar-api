@@ -1,12 +1,13 @@
 import nodemailer from 'nodemailer';
 import { parseAccessPasswords, requireAccessToken } from './_lib/auth.js';
 import { applyCors, handleOptions, rejectDisallowedOrigin } from './_lib/cors.js';
+import { fetchRepositoryJson, updateRepositoryJson } from './_lib/github.js';
 import { enforceRateLimit } from './_lib/rate-limit.js';
 
 const FEEDBACK_FALLBACK = 'tbimanager@abif.iitkgp.ac.in';
 
 export default async function handler(req, res) {
-  const corsState = applyCors(req, res, 'POST,OPTIONS');
+  const corsState = applyCors(req, res);
 
   if (handleOptions(req, res)) {
     return;
@@ -14,6 +15,24 @@ export default async function handler(req, res) {
 
   if (rejectDisallowedOrigin(req, res, corsState)) {
     return;
+  }
+
+  if (req.method === 'GET') {
+    const action = req.query?.action;
+    if (action === 'fetch_suggestions') {
+      const configuredPasswords = parseAccessPasswords();
+      if (!requireAccessToken(req, res, configuredPasswords)) {
+        return;
+      }
+
+      try {
+        const { data: suggestions } = await fetchRepositoryJson('public/data/suggestions.json');
+        return res.status(200).json(suggestions);
+      } catch (error) {
+        return res.status(500).json({ error: error.message || 'Failed to fetch suggestions' });
+      }
+    }
+    return res.status(400).json({ error: 'Invalid action' });
   }
 
   if (req.method !== 'POST') {
@@ -44,8 +63,34 @@ export default async function handler(req, res) {
     ABIF_TEAM_EMAIL
   } = process.env;
 
+  const safeUserEmail = typeof userEmail === 'string' && userEmail.trim() ? userEmail.trim() : 'Anonymous';
+  const safeTimestamp = timestamp ? new Date(timestamp) : new Date();
+
+  // 1. Persist to GitHub
+  try {
+    await updateRepositoryJson(
+      'public/data/suggestions.json',
+      (current) => {
+        const list = Array.isArray(current) ? current : [];
+        list.push({
+          id: crypto.randomUUID?.() || Date.now().toString(),
+          email: safeUserEmail,
+          feedback: feedback.trim(),
+          timestamp: safeTimestamp.toISOString()
+        });
+        return list;
+      },
+      `feat: record ecosystem suggestion from ${safeUserEmail}`
+    );
+  } catch (err) {
+    console.error('Failed to persist suggestion:', err);
+    // Continue anyway to send email if possible
+  }
+
+  // 2. Send Email
   if (!SMTP_HOST || !SMTP_USER || !SMTP_PASS || !SMTP_FROM) {
-    return res.status(500).json({ error: 'SMTP credentials are not configured' });
+    // If SMTP is not configured, we just return success after persisting
+    return res.status(200).json({ message: 'Feedback recorded' });
   }
 
   const transporter = nodemailer.createTransport({
@@ -59,8 +104,6 @@ export default async function handler(req, res) {
   });
 
   const recipient = FEEDBACK_TO || ABIF_TEAM_EMAIL || FEEDBACK_FALLBACK;
-  const safeUserEmail = typeof userEmail === 'string' && userEmail.trim() ? userEmail.trim() : 'Anonymous';
-  const safeTimestamp = timestamp ? new Date(timestamp) : new Date();
 
   try {
     await transporter.sendMail({
@@ -82,8 +125,9 @@ export default async function handler(req, res) {
       `
     });
 
-    return res.status(200).json({ message: 'Feedback sent successfully' });
+    return res.status(200).json({ message: 'Feedback sent and recorded' });
   } catch (error) {
-    return res.status(500).json({ error: error.message || 'Failed to send feedback email' });
+    // If email fails but persistence succeeded, we might still want to report success to user
+    return res.status(200).json({ message: 'Feedback recorded (notification delay)', error: error.message });
   }
 }

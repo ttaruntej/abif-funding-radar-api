@@ -76,7 +76,7 @@ export default async function handler(req, res) {
 
     if (action === 'fetch_meta') {
       try {
-        const meta = await fetchRepositoryJson('public/data/last_dispatch_meta.json');
+        const { data: meta } = await fetchRepositoryJson('public/data/last_dispatch_meta.json');
         return res.status(200).json(meta);
       } catch (error) {
         return res.status(500).json({ error: error.message || 'Failed to fetch dispatch metadata' });

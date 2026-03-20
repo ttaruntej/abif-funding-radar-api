@@ -90,5 +90,46 @@ export const fetchRepositoryJson = async (repoPath) => {
 
   const payload = await response.json();
   const content = Buffer.from(payload.content, 'base64').toString('utf-8');
-  return JSON.parse(content);
+  return {
+    data: JSON.parse(content),
+    sha: payload.sha
+  };
+};
+
+export const updateRepositoryJson = async (repoPath, updateFn, message = 'Update JSON data') => {
+  const { repoOwner, repoName, ref } = getRepoConfig();
+
+  // 1. Fetch current content and SHA
+  let currentData = null;
+  let sha = null;
+
+  try {
+    const { data: fetchedData, sha: fetchedSha } = await fetchRepositoryJson(repoPath);
+    currentData = fetchedData;
+    sha = fetchedSha;
+  } catch (error) {
+    // If file doesn't exist, we start with null/empty depending on use case
+    // For suggestions, we expect it to exist or we can default to empty array
+    currentData = [];
+  }
+
+  // 2. Apply update
+  const updatedData = updateFn(currentData);
+
+  // 3. Push back to GitHub
+  const response = await githubFetch(`/repos/${repoOwner}/${repoName}/contents/${repoPath}`, {
+    method: 'PUT',
+    body: JSON.stringify({
+      message,
+      content: Buffer.from(JSON.stringify(updatedData, null, 2)).toString('base64'),
+      sha, // only required if updating
+      branch: ref
+    })
+  });
+
+  if (!response.ok) {
+    throw new Error(await parseError(response));
+  }
+
+  return { ok: true };
 };
