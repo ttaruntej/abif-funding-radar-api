@@ -35,6 +35,27 @@ export default async function handler(req, res) {
     return res.status(400).json({ error: 'Invalid action' });
   }
 
+  if (req.method === 'DELETE') {
+    const id = req.query?.id;
+    if (!id) {
+      return res.status(400).json({ error: 'ID is required' });
+    }
+
+    try {
+      await updateRepositoryJson(
+        'public/data/suggestions.json',
+        (current) => {
+          const list = Array.isArray(current) ? current : [];
+          return list.filter((item) => item.id !== id);
+        },
+        `feat: delete ecosystem suggestion ${id}`
+      );
+      return res.status(200).json({ message: 'Suggestion deleted' });
+    } catch (error) {
+      return res.status(500).json({ error: error.message || 'Failed to delete suggestion' });
+    }
+  }
+
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
   }
